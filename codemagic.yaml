@@ -1,0 +1,25 @@
+workflows:
+  ios-development:
+    name: Nox Calendar unsigned IPA for AltStore
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+    scripts:
+      - name: Extract iOS project files
+        script: unzip -oq NoxCalendar-iOS-source.zip -d "$CM_BUILD_DIR"
+      - name: Install XcodeGen
+        script: brew install xcodegen
+      - name: Generate Xcode project
+        script: cd ios/NoxCalendar && xcodegen generate --spec project.yml
+      - name: Archive iOS app without signing
+        script: xcodebuild -project ios/NoxCalendar/NoxCalendar.xcodeproj -scheme NoxCalendar -configuration Release -destination 'generic/platform=iOS' -archivePath build/NoxCalendar.xcarchive CODE_SIGNING_ALLOWED=NO archive
+      - name: Package IPA for AltStore
+        script: |
+          mkdir -p build/ipa/Payload
+          ditto build/NoxCalendar.xcarchive/Products/Applications/Nox\ Calendar.app build/ipa/Payload/Nox\ Calendar.app
+          cd build/ipa
+          zip -qry "$CM_BUILD_DIR/Nox-Calendar-unsigned.ipa" Payload
+    artifacts:
+      - Nox-Calendar-unsigned.ipa
+      - /tmp/xcodebuild_logs/*.log
